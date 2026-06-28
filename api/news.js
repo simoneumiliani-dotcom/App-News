@@ -1,14 +1,28 @@
 const CATEGORY_QUERIES = {
-  all: "world OR global OR international",
-  politics: 'topic:"politics"',
-  business: 'topic:"financial and economic news"',
-  technology: 'topic:"science and technology"',
-  sports: 'topic:"sports"',
-  health: 'topic:"health"',
-  science: 'topic:"science"',
-  entertainment: 'topic:"entertainment"',
-  climate: 'topic:"environment"',
-  culture: 'topic:"arts and culture"'
+  it: {
+    all: "mondo internazionale attualita",
+    politics: "politica governo parlamento elezioni",
+    business: "economia mercati finanza imprese",
+    technology: "tecnologia intelligenza artificiale startup cybersecurity",
+    sports: "sport calcio tennis basket olimpiadi",
+    health: "salute medicina ospedale vaccini",
+    science: "scienza ricerca spazio scoperta",
+    entertainment: "cinema musica spettacolo streaming",
+    climate: "clima ambiente energia meteo emissioni",
+    culture: "cultura libri arte museo patrimonio"
+  },
+  en: {
+    all: "world global international",
+    politics: "politics government parliament election diplomacy",
+    business: "economy markets finance business inflation",
+    technology: "technology artificial intelligence startup cybersecurity",
+    sports: "sport football soccer tennis basketball olympics",
+    health: "health medicine hospital vaccine disease",
+    science: "science research space discovery",
+    entertainment: "cinema music entertainment streaming celebrity",
+    climate: "climate environment energy weather emissions",
+    culture: "culture books art museum heritage"
+  }
 };
 
 const LANGUAGE_QUERIES = {
@@ -101,6 +115,10 @@ async function fetchWebzNews({ category, country, lang, q }) {
 
   const articles = dedupe(data.posts || data.articles || []).map(normalizeWebzArticle);
 
+  if (articles.length === 0) {
+    throw new Error("Webz.io returned no articles");
+  }
+
   return {
     articles,
     sourceNote: lang === "en"
@@ -112,10 +130,15 @@ async function fetchWebzNews({ category, country, lang, q }) {
 function buildWebzQuery({ category, country, lang, q }) {
   return [
     q,
-    CATEGORY_QUERIES[category] || CATEGORY_QUERIES.all,
+    getCategoryQuery(category, lang),
     LANGUAGE_QUERIES[lang] || LANGUAGE_QUERIES.it,
     country ? `site_country:${country}` : ""
   ].filter(Boolean).join(" ");
+}
+
+function getCategoryQuery(category, lang) {
+  const dictionary = CATEGORY_QUERIES[lang] || CATEGORY_QUERIES.it;
+  return dictionary[category] || dictionary.all;
 }
 
 function dedupe(articles) {
@@ -159,7 +182,7 @@ async function fetchGoogleNews({ category, country, lang, q }) {
   const locale = getGoogleLocale(country, lang);
   const query = [
     q,
-    fallbackQueryForCategory(category)
+    getCategoryQuery(category, lang)
   ].filter(Boolean).join(" ");
   const rssUrl = new URL("https://news.google.com/rss/search");
   rssUrl.searchParams.set("q", query);
@@ -184,14 +207,8 @@ async function fetchGoogleNews({ category, country, lang, q }) {
     articles: parseGoogleNews(xml, locale.gl),
     sourceNote: missingToken
       ? "Aggiungi WEBZ_IO_TOKEN su Vercel per usare Webz.io. Fallback temporaneo da Google News RSS."
-      : "Webz.io non disponibile ora. Fallback temporaneo da Google News RSS."
+      : "Webz.io non ha trovato risultati per questi filtri. Fallback temporaneo da Google News RSS."
   };
-}
-
-function fallbackQueryForCategory(category) {
-  return (CATEGORY_QUERIES[category] || CATEGORY_QUERIES.all)
-    .replace(/topic:"([^"]+)"/g, "$1")
-    .replace(/\bOR\b/g, " ");
 }
 
 function getGoogleLocale(country, lang) {
