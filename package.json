@@ -1,0 +1,16 @@
+{
+  "name": "mondo-chiaro-news",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "PWA di news globali in italiano e inglese, pronta per Vercel.",
+  "scripts": {
+    "start": "vercel dev",
+    "dev": "vercel dev",
+    "preview": "node scripts/preview-server.mjs",
+    "check": "node scripts/check-api.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-label="Mondo Chiaro">
+  <rect width="1200" height="675" fill="#d9ebe5"/>
+  <rect x="120" y="112" width="960" height="451" rx="24" fill="#ffffff" opacity=".82"/>
+  <rect x="180" y="180" width="360" height="34" rx="17" fill="#0d5c63"/>
+  <rect x="180" y="258" width="760" height="28" rx="14" fill="#073b4c" opacity=".82"/>
+  <rect x="180" y="318" width="620" height="24" rx="12" fill="#5a6f73" opacity=".42"/>
+  <rect x="180" y="370" width="720" height="24" rx="12" fill="#5a6f73" opacity=".32"/>
+  <circle cx="940" cy="214" r="74" fill="#f6bd60"/>
+</svg>

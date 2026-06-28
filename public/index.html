@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0d3b4c">
+    <meta name="description" content="Mondo Chiaro raccoglie notizie globali filtrabili per categoria e paese.">
+    <title>Mondo Chiaro</title>
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/icons/icon-192.svg">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="Mondo Chiaro">
+          <span class="brand-mark">MC</span>
+          <span>
+            <strong>Mondo Chiaro</strong>
+            <small>News globali</small>
+          </span>
+        </a>
+        <div class="top-actions">
+          <button class="icon-button" id="refreshButton" type="button" title="Aggiorna" aria-label="Aggiorna">↻</button>
+          <button class="install-button" id="installButton" type="button" hidden>Installa</button>
+        </div>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Aggiornamenti dal mondo</p>
+            <h1>Le notizie importanti, ordinate con calma.</h1>
+            <p>Un flusso globale filtrabile per paese e categoria, con una modalità compatta pensata per mobile.</p>
+          </div>
+          <aside class="widget" aria-label="Widget notizie">
+            <div class="widget-header">
+              <span>Widget mobile</span>
+              <button id="shareButton" type="button">Condividi</button>
+            </div>
+            <div class="widget-card">
+              <span class="live-dot"></span>
+              <div>
+                <strong id="widgetTitle">Caricamento notizie...</strong>
+                <p id="widgetMeta">Il riepilogo si aggiorna automaticamente.</p>
+              </div>
+            </div>
+          </aside>
+        </section>
+
+        <section class="controls" aria-label="Filtri notizie">
+          <label>
+            <span>Cerca</span>
+            <input id="searchInput" type="search" placeholder="Parola chiave, fonte, città">
+          </label>
+          <label>
+            <span>Categoria</span>
+            <select id="categorySelect"></select>
+          </label>
+          <label>
+            <span>Paese</span>
+            <select id="countrySelect"></select>
+          </label>
+          <label>
+            <span>Lingua</span>
+            <select id="languageSelect">
+              <option value="it">Italiano</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+        </section>
+
+        <section class="status-row">
+          <div>
+            <strong id="resultCount">Notizie</strong>
+            <span id="statusText">Raccolgo le ultime storie disponibili.</span>
+          </div>
+          <button class="ghost-button" id="favoritesToggle" type="button">Preferiti</button>
+        </section>
+
+        <section class="news-grid" id="newsGrid" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <template id="articleTemplate">
+      <article class="article-card">
+        <a class="article-image-link" target="_blank" rel="noopener noreferrer">
+          <img alt="" loading="lazy">
+        </a>
+        <div class="article-body">
+          <div class="article-meta"></div>
+          <h2><a target="_blank" rel="noopener noreferrer"></a></h2>
+          <p></p>
+          <div class="article-actions">
+            <a class="read-link" target="_blank" rel="noopener noreferrer">Leggi</a>
+            <button class="save-button" type="button">Salva</button>
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
