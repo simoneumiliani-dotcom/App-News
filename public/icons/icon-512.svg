@@ -1,6 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#073b4c"/>
-  <circle cx="376" cy="134" r="58" fill="#f6bd60"/>
-  <path fill="#ffffff" d="M102 140h184v45H102zm0 96h308v45H102zm0 96h244v45H102z"/>
-  <path fill="#78c6a3" d="M102 404h148v28H102z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="World news">
+  <defs>
+    <linearGradient id="bg" x1="74" y1="64" x2="432" y2="452" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#073b4c"/>
+      <stop offset="0.58" stop-color="#0d5c63"/>
+      <stop offset="1" stop-color="#78c6a3"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="262" r="144" fill="#ffffff" fill-opacity="0.14" stroke="#fff" stroke-width="24"/>
+  <path d="M112 272c72-66 216-66 288 0" fill="none" stroke="#f6bd60" stroke-linecap="round" stroke-width="27"/>
+  <path d="M146 342c56-43 164-43 220 0" fill="none" stroke="#f6bd60" stroke-linecap="round" stroke-width="24"/>
+  <path d="M320 90l24 53 53 24-53 24-24 53-24-53-53-24 53-24z" fill="#fff"/>
 </svg>

@@ -1,6 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
-  <rect width="192" height="192" rx="36" fill="#073b4c"/>
-  <circle cx="142" cy="50" r="22" fill="#f6bd60"/>
-  <path fill="#ffffff" d="M38 52h70v17H38zm0 36h116v17H38zm0 36h92v17H38z"/>
-  <path fill="#78c6a3" d="M38 150h56v10H38z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="World news">
+  <defs>
+    <linearGradient id="bg" x1="28" y1="24" x2="162" y2="170" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#073b4c"/>
+      <stop offset="0.58" stop-color="#0d5c63"/>
+      <stop offset="1" stop-color="#78c6a3"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="42" fill="url(#bg)"/>
+  <circle cx="96" cy="98" r="54" fill="#ffffff" fill-opacity="0.14" stroke="#fff" stroke-width="9"/>
+  <path d="M42 102c27-25 81-25 108 0" fill="none" stroke="#f6bd60" stroke-linecap="round" stroke-width="10"/>
+  <path d="M55 128c21-16 61-16 82 0" fill="none" stroke="#f6bd60" stroke-linecap="round" stroke-width="9"/>
+  <path d="M120 34l9 20 20 9-20 9-9 20-9-20-20-9 20-9z" fill="#fff"/>
 </svg>

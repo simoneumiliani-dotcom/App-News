@@ -230,7 +230,7 @@ function setLoading(isLoading) {
 
 async function shareApp() {
   const shareData = {
-    title: "Mondo Chiaro",
+    title: "World news",
     text: "News globali filtrabili, installabili come PWA.",
     url: location.href
   };

@@ -1,6 +1,6 @@
 {
-  "name": "Mondo Chiaro",
-  "short_name": "MondoChiaro",
+  "name": "World news",
+  "short_name": "World news",
   "description": "News globali filtrabili per paese, categoria e lingua.",
   "start_url": "/",
   "scope": "/",
@@ -30,8 +30,8 @@
       "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
     },
     {
-      "name": "Mondo",
-      "short_name": "Mondo",
+      "name": "World news",
+      "short_name": "World",
       "url": "/",
       "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
     }
