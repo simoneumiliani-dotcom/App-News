@@ -52,3 +52,6 @@ WEBZ_IO_TOKEN=la_tua_chiave_webz_io
 ```
 
 La trovi in Vercel in `Project Settings` -> `Environment Variables`.
+
+
+Nota: i filtri categoria usano query ampie con fallback automatico quando Webz.io non restituisce risultati.
