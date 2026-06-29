@@ -99,7 +99,9 @@ async function fetchCombinedNews(filters) {
 
   const googleArticles = googleResult.status === "fulfilled" ? googleResult.value : [];
   const ansaArticles = ansaResult.status === "fulfilled" ? ansaResult.value : [];
-  const articles = sortByDate(dedupe([...googleArticles, ...ansaArticles])).slice(0, 48);
+  const articles = await enrichMissingImages(
+    sortByDate(dedupe([...googleArticles, ...ansaArticles])).slice(0, 48)
+  );
 
   if (articles.length === 0) {
     throw new Error("No news available from Google News or ANSA");
@@ -200,12 +202,13 @@ function normalizeRssArticle(item, { country, fallbackDomain, language }) {
   const source = readSource(item) || fallbackDomain;
   const pubDate = readTag(item, "pubDate");
   const publishedAt = pubDate ? new Date(pubDate) : null;
-  const description = stripHtml(readTag(item, "description"));
+  const rawDescription = readTag(item, "description");
+  const description = stripHtml(rawDescription);
 
   return {
     title,
     url: link,
-    image: readMediaUrl(item),
+    image: readMediaUrl(item) || readImageFromHtml(rawDescription),
     domain: source,
     country,
     language,
@@ -241,6 +244,49 @@ function sortByDate(articles) {
   });
 }
 
+async function enrichMissingImages(articles) {
+  const enriched = await Promise.all(articles.map(async (article, index) => {
+    if (article.image || index >= 18) return article;
+
+    const image = await fetchPageImage(article.url);
+    return image ? { ...article, image } : article;
+  }));
+
+  return enriched;
+}
+
+async function fetchPageImage(url) {
+  if (!url || !/^https?:\/\//i.test(url)) return "";
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1600);
+
+  try {
+    const response = await fetch(url, {
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "WorldNewsPWA/1.0",
+        "Accept": "text/html,application/xhtml+xml"
+      }
+    });
+
+    if (!response.ok) return "";
+
+    const html = await response.text();
+    const baseUrl = response.url || url;
+    return normalizeImageUrl(
+      readMetaImage(html)
+        || readImageFromHtml(html),
+      baseUrl
+    );
+  } catch {
+    return "";
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function dedupe(articles) {
   const seen = new Set();
   return articles.filter(article => {
@@ -263,7 +309,35 @@ function readSource(item) {
 
 function readMediaUrl(item) {
   const media = item.match(/<(?:media:content|media:thumbnail|enclosure)[^>]+url=["']([^"']+)["'][^>]*>/i);
-  return decodeXml(media?.[1] || "");
+  return normalizeImageUrl(decodeXml(media?.[1] || ""));
+}
+
+function readMetaImage(html) {
+  return readMetaContent(html, "property", "og:image")
+    || readMetaContent(html, "property", "og:image:url")
+    || readMetaContent(html, "name", "twitter:image")
+    || readMetaContent(html, "name", "twitter:image:src");
+}
+
+function readMetaContent(html, attribute, value) {
+  const pattern = new RegExp(`<meta[^>]+${attribute}=["']${escapeRegExp(value)}["'][^>]+content=["']([^"']+)["'][^>]*>`, "i");
+  const reversePattern = new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+${attribute}=["']${escapeRegExp(value)}["'][^>]*>`, "i");
+  return decodeXml(html.match(pattern)?.[1] || html.match(reversePattern)?.[1] || "");
+}
+
+function readImageFromHtml(html) {
+  const image = html.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i);
+  return normalizeImageUrl(decodeXml(image?.[1] || ""));
+}
+
+function normalizeImageUrl(value, baseUrl = "") {
+  if (!value || value.startsWith("data:")) return "";
+
+  try {
+    return new URL(value, baseUrl || undefined).toString();
+  } catch {
+    return "";
+  }
 }
 
 function stripHtml(value) {
@@ -284,4 +358,8 @@ function decodeXml(value) {
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .trim();
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

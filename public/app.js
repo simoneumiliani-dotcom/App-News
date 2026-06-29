@@ -168,6 +168,10 @@ function createArticle(article) {
   imageLink.href = article.url;
   img.src = article.image || "/icons/news-placeholder.svg";
   img.alt = article.title;
+  img.onerror = () => {
+    img.onerror = null;
+    img.src = "/icons/news-placeholder.svg";
+  };
   meta.textContent = [article.domain, article.country, formatDate(article.seenAt)].filter(Boolean).join(" - ");
   title.href = article.url;
   title.textContent = article.title;
