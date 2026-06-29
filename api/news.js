@@ -60,22 +60,15 @@ export default async function handler(request, response) {
   }
 
   try {
-    const payload = await fetchGoogleNews({ category, country, lang, q });
+    const payload = await fetchCombinedNews({ category, country, lang, q });
     memoryCache.set(cacheKey, { createdAt: Date.now(), payload });
     response.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=900");
     response.status(200).json(payload);
   } catch {
-    try {
-      const payload = await fetchAnsaNews({ category, country, lang, q });
-      memoryCache.set(cacheKey, { createdAt: Date.now(), payload });
-      response.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=900");
-      response.status(200).json(payload);
-    } catch {
-      response.status(502).json({
-        articles: [],
-        error: "NEWS_SOURCE_UNAVAILABLE"
-      });
-    }
+    response.status(502).json({
+      articles: [],
+      error: "NEWS_SOURCE_UNAVAILABLE"
+    });
   }
 }
 
@@ -98,7 +91,29 @@ function cleanToken(value) {
   return value.replace(/[^A-Z]/gi, "").toUpperCase().slice(0, 3);
 }
 
-async function fetchGoogleNews({ category, country, lang, q }) {
+async function fetchCombinedNews(filters) {
+  const [googleResult, ansaResult] = await Promise.allSettled([
+    fetchGoogleArticles(filters),
+    fetchAnsaArticles(filters)
+  ]);
+
+  const googleArticles = googleResult.status === "fulfilled" ? googleResult.value : [];
+  const ansaArticles = ansaResult.status === "fulfilled" ? ansaResult.value : [];
+  const articles = sortByDate(dedupe([...googleArticles, ...ansaArticles])).slice(0, 48);
+
+  if (articles.length === 0) {
+    throw new Error("No news available from Google News or ANSA");
+  }
+
+  return {
+    articles: filters.category === "breaking" ? prioritizeRecent(articles) : articles,
+    sourceNote: filters.lang === "en"
+      ? "Primary sources: Google News RSS and ANSA, shown together with equal priority."
+      : "Fonti primarie: Google News RSS e ANSA, mostrate insieme con pari importanza."
+  };
+}
+
+async function fetchGoogleArticles({ category, country, lang, q }) {
   const locale = getGoogleLocale(country, lang);
   const query = [
     q,
@@ -131,15 +146,10 @@ async function fetchGoogleNews({ category, country, lang, q }) {
     throw new Error("Google News returned no articles");
   }
 
-  return {
-    articles: category === "breaking" ? prioritizeRecent(articles) : articles,
-    sourceNote: lang === "en"
-      ? "Primary source: Google News RSS. ANSA is used only when Google has no available results."
-      : "Fonte principale: Google News RSS. ANSA viene usata solo se Google non restituisce risultati."
-  };
+  return articles;
 }
 
-async function fetchAnsaNews({ category, country, lang, q }) {
+async function fetchAnsaArticles({ category, q }) {
   const feedUrl = ANSA_FEEDS[category] || ANSA_FEEDS.breaking;
   const rssResponse = await fetch(feedUrl, {
     headers: {
@@ -162,12 +172,7 @@ async function fetchAnsaNews({ category, country, lang, q }) {
     throw new Error("ANSA returned no articles");
   }
 
-  return {
-    articles: category === "breaking" ? prioritizeRecent(articles) : articles,
-    sourceNote: lang === "en"
-      ? "Google News has no available results for these filters. Secondary source: ANSA."
-      : "Google News non ha restituito risultati per questi filtri. Fonte secondaria: ANSA."
-  };
+  return articles;
 }
 
 function getCategoryQuery(category, lang) {
@@ -226,6 +231,14 @@ function prioritizeRecent(articles) {
   });
 
   return recent.length >= 3 ? recent : articles;
+}
+
+function sortByDate(articles) {
+  return [...articles].sort((left, right) => {
+    const leftTime = new Date(left.seenAt).getTime() || 0;
+    const rightTime = new Date(right.seenAt).getTime() || 0;
+    return rightTime - leftTime;
+  });
 }
 
 function dedupe(articles) {
