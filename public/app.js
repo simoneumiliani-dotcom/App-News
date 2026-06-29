@@ -1,4 +1,5 @@
 const categories = [
+  ["breaking", "Ultim'ora"],
   ["all", "Tutte"],
   ["politics", "Politica"],
   ["business", "Economia"],
@@ -14,6 +15,8 @@ const categories = [
 const countries = [
   ["", "Tutto il mondo"],
   ["IT", "Italia"],
+  ["EG", "Egitto"],
+  ["AE", "Abu Dhabi"],
   ["US", "Stati Uniti"],
   ["GB", "Regno Unito"],
   ["FR", "Francia"],

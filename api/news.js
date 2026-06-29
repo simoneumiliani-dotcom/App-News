@@ -1,5 +1,6 @@
 const CATEGORY_QUERIES = {
   it: {
+    breaking: "ultim'ora notizie importanti when:1h",
     all: "mondo internazionale attualita",
     politics: "politica governo parlamento elezioni",
     business: "economia mercati finanza imprese",
@@ -12,6 +13,7 @@ const CATEGORY_QUERIES = {
     culture: "cultura libri arte museo patrimonio"
   },
   en: {
+    breaking: "breaking news top stories when:1h",
     all: "world global international",
     politics: "politics government parliament election diplomacy",
     business: "economy markets finance business inflation",
@@ -25,19 +27,28 @@ const CATEGORY_QUERIES = {
   }
 };
 
-const LANGUAGE_QUERIES = {
-  it: "language:italian",
-  en: "language:english"
+const ANSA_FEEDS = {
+  breaking: "https://www.ansa.it/sito/notizie/topnews/topnews_rss.xml",
+  all: "https://www.ansa.it/sito/ansait_rss.xml",
+  politics: "https://www.ansa.it/sito/notizie/politica/politica_rss.xml",
+  business: "https://www.ansa.it/sito/notizie/economia/economia_rss.xml",
+  technology: "https://www.ansa.it/sito/notizie/tecnologia/tecnologia_rss.xml",
+  sports: "https://www.ansa.it/sito/notizie/sport/sport_rss.xml",
+  health: "https://www.ansa.it/canale_saluteebenessere/notizie/saluteebenessere_rss.xml",
+  science: "https://www.ansa.it/canale_scienza_tecnica/notizie/scienza_tecnica_rss.xml",
+  entertainment: "https://www.ansa.it/sito/notizie/cultura/cultura_rss.xml",
+  climate: "https://www.ansa.it/canale_ambiente/notizie/ambiente_rss.xml",
+  culture: "https://www.ansa.it/sito/notizie/cultura/cultura_rss.xml"
 };
 
-const memoryCache = globalThis.__mondoChiaroCache || new Map();
-globalThis.__mondoChiaroCache = memoryCache;
+const memoryCache = globalThis.__worldNewsCache || new Map();
+globalThis.__worldNewsCache = memoryCache;
 
 export default async function handler(request, response) {
   const { searchParams } = new URL(request.url, "http://localhost");
-  const category = searchParams.get("category") || "all";
+  const category = cleanCategory(searchParams.get("category") || "breaking");
   const country = cleanToken(searchParams.get("country") || "");
-  const lang = searchParams.get("lang") || "it";
+  const lang = cleanLang(searchParams.get("lang") || "it");
   const q = cleanQuery(searchParams.get("q") || "");
   const cacheKey = JSON.stringify({ category, country, lang, q });
   const cached = memoryCache.get(cacheKey);
@@ -49,13 +60,13 @@ export default async function handler(request, response) {
   }
 
   try {
-    const payload = await fetchWebzNews({ category, country, lang, q });
+    const payload = await fetchGoogleNews({ category, country, lang, q });
     memoryCache.set(cacheKey, { createdAt: Date.now(), payload });
     response.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=900");
     response.status(200).json(payload);
   } catch {
     try {
-      const payload = await fetchGoogleNews({ category, country, lang, q });
+      const payload = await fetchAnsaNews({ category, country, lang, q });
       memoryCache.set(cacheKey, { createdAt: Date.now(), payload });
       response.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=900");
       response.status(200).json(payload);
@@ -68,6 +79,14 @@ export default async function handler(request, response) {
   }
 }
 
+function cleanCategory(value) {
+  return Object.prototype.hasOwnProperty.call(CATEGORY_QUERIES.it, value) ? value : "breaking";
+}
+
+function cleanLang(value) {
+  return value === "en" ? "en" : "it";
+}
+
 function cleanQuery(value) {
   return value
     .replace(/[^\p{L}\p{N}\s'"-]/gu, " ")
@@ -77,105 +96,6 @@ function cleanQuery(value) {
 
 function cleanToken(value) {
   return value.replace(/[^A-Z]/gi, "").toUpperCase().slice(0, 3);
-}
-
-function getWebzToken() {
-  return globalThis.__WEBZ_IO_TOKEN
-    || globalThis.process?.env?.WEBZ_IO_TOKEN
-    || globalThis.process?.env?.WEBZ_TOKEN
-    || "";
-}
-
-async function fetchWebzNews({ category, country, lang, q }) {
-  const token = getWebzToken();
-
-  if (!token) {
-    throw new Error("WEBZ_IO_TOKEN missing");
-  }
-
-  const webzUrl = new URL("https://api.webz.io/newsApiLite");
-  webzUrl.searchParams.set("token", token);
-  webzUrl.searchParams.set("q", buildWebzQuery({ category, country, lang, q }));
-
-  const webzResponse = await fetch(webzUrl, {
-    headers: {
-      "User-Agent": "MondoChiaroNews/1.0"
-    }
-  });
-
-  if (!webzResponse.ok) {
-    throw new Error(`Webz.io ${webzResponse.status}`);
-  }
-
-  const data = await webzResponse.json();
-
-  if (data.error) {
-    throw new Error(typeof data.error === "string" ? data.error : "Webz.io error");
-  }
-
-  const articles = dedupe(data.posts || data.articles || []).map(normalizeWebzArticle);
-
-  if (articles.length === 0) {
-    throw new Error("Webz.io returned no articles");
-  }
-
-  return {
-    articles,
-    sourceNote: lang === "en"
-      ? "Primary source: Webz.io News API Lite, global news in English."
-      : "Fonte principale: Webz.io News API Lite, notizie globali in italiano."
-  };
-}
-
-function buildWebzQuery({ category, country, lang, q }) {
-  return [
-    q,
-    getCategoryQuery(category, lang),
-    LANGUAGE_QUERIES[lang] || LANGUAGE_QUERIES.it,
-    country ? `site_country:${country}` : ""
-  ].filter(Boolean).join(" ");
-}
-
-function getCategoryQuery(category, lang) {
-  const dictionary = CATEGORY_QUERIES[lang] || CATEGORY_QUERIES.it;
-  return dictionary[category] || dictionary.all;
-}
-
-function dedupe(articles) {
-  const seen = new Set();
-  return articles.filter(article => {
-    const key = article.url || article.title;
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function normalizeWebzArticle(article) {
-  const thread = article.thread || {};
-  const source = thread.site_full || thread.site || article.site || "";
-
-  return {
-    title: article.title || thread.title || "Notizia senza titolo",
-    url: article.url || thread.url || "",
-    image: thread.main_image || article.image || "",
-    domain: source,
-    country: thread.country || article.country || "",
-    language: article.language || "",
-    seenAt: article.published || article.crawled || "",
-    summary: buildSummary(article.text || article.highlightText, source)
-  };
-}
-
-function buildSummary(body, source) {
-  if (body) {
-    const clean = stripHtml(body).replace(/\s+/g, " ").trim();
-    return clean.length > 180 ? `${clean.slice(0, 177)}...` : clean;
-  }
-
-  return source
-    ? `Copertura segnalata da ${source}.`
-    : "Copertura internazionale indicizzata da Webz.io.";
 }
 
 async function fetchGoogleNews({ category, country, lang, q }) {
@@ -192,7 +112,7 @@ async function fetchGoogleNews({ category, country, lang, q }) {
 
   const rssResponse = await fetch(rssUrl, {
     headers: {
-      "User-Agent": "MondoChiaroNews/1.0"
+      "User-Agent": "WorldNewsPWA/1.0"
     }
   });
 
@@ -201,14 +121,58 @@ async function fetchGoogleNews({ category, country, lang, q }) {
   }
 
   const xml = await rssResponse.text();
-  const missingToken = !getWebzToken();
+  const articles = parseRss(xml, {
+    country: locale.gl,
+    fallbackDomain: "Google News",
+    language: lang
+  });
+
+  if (articles.length === 0) {
+    throw new Error("Google News returned no articles");
+  }
 
   return {
-    articles: parseGoogleNews(xml, locale.gl),
-    sourceNote: missingToken
-      ? "Aggiungi WEBZ_IO_TOKEN su Vercel per usare Webz.io. Fallback temporaneo da Google News RSS."
-      : "Webz.io non ha trovato risultati per questi filtri. Fallback temporaneo da Google News RSS."
+    articles: category === "breaking" ? prioritizeRecent(articles) : articles,
+    sourceNote: lang === "en"
+      ? "Primary source: Google News RSS. ANSA is used only when Google has no available results."
+      : "Fonte principale: Google News RSS. ANSA viene usata solo se Google non restituisce risultati."
   };
+}
+
+async function fetchAnsaNews({ category, country, lang, q }) {
+  const feedUrl = ANSA_FEEDS[category] || ANSA_FEEDS.breaking;
+  const rssResponse = await fetch(feedUrl, {
+    headers: {
+      "User-Agent": "WorldNewsPWA/1.0"
+    }
+  });
+
+  if (!rssResponse.ok) {
+    throw new Error(`ANSA ${rssResponse.status}`);
+  }
+
+  const xml = await rssResponse.text();
+  const articles = parseRss(xml, {
+    country: "IT",
+    fallbackDomain: "ANSA",
+    language: "it"
+  }).filter(article => matchesTerms(article, q));
+
+  if (articles.length === 0) {
+    throw new Error("ANSA returned no articles");
+  }
+
+  return {
+    articles: category === "breaking" ? prioritizeRecent(articles) : articles,
+    sourceNote: lang === "en"
+      ? "Google News has no available results for these filters. Secondary source: ANSA."
+      : "Google News non ha restituito risultati per questi filtri. Fonte secondaria: ANSA."
+  };
+}
+
+function getCategoryQuery(category, lang) {
+  const dictionary = CATEGORY_QUERIES[lang] || CATEGORY_QUERIES.it;
+  return dictionary[category] || dictionary.breaking;
 }
 
 function getGoogleLocale(country, lang) {
@@ -219,25 +183,59 @@ function getGoogleLocale(country, lang) {
   return { hl: "it-IT", gl: country || "IT", lang: "it" };
 }
 
-function parseGoogleNews(xml, country) {
+function parseRss(xml, options) {
   const items = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
-  return items.slice(0, 36).map(item => {
-    const title = stripSource(readTag(item, "title"));
-    const link = readTag(item, "link");
-    const source = readSource(item);
-    const pubDate = readTag(item, "pubDate");
+  return dedupe(items.slice(0, 48).map(item => normalizeRssArticle(item, options)))
+    .filter(article => article.title && article.url);
+}
 
-    return {
-      title,
-      url: link,
-      image: "",
-      domain: source,
-      country,
-      language: "",
-      seenAt: pubDate ? new Date(pubDate).toISOString() : "",
-      summary: source ? `Copertura segnalata da ${source}.` : "Copertura da Google News RSS."
-    };
-  }).filter(article => article.title && article.url);
+function normalizeRssArticle(item, { country, fallbackDomain, language }) {
+  const title = stripSource(readTag(item, "title"));
+  const link = readTag(item, "link");
+  const source = readSource(item) || fallbackDomain;
+  const pubDate = readTag(item, "pubDate");
+  const publishedAt = pubDate ? new Date(pubDate) : null;
+  const description = stripHtml(readTag(item, "description"));
+
+  return {
+    title,
+    url: link,
+    image: readMediaUrl(item),
+    domain: source,
+    country,
+    language,
+    seenAt: publishedAt && Number.isFinite(publishedAt.getTime()) ? publishedAt.toISOString() : "",
+    summary: description || (source ? `Copertura segnalata da ${source}.` : "Copertura news RSS.")
+  };
+}
+
+function matchesTerms(article, terms) {
+  if (!terms) return true;
+  const haystack = `${article.title} ${article.summary}`.toLocaleLowerCase("it-IT");
+  return terms
+    .split(/\s+/)
+    .filter(term => term.length > 3)
+    .some(term => haystack.includes(term.toLocaleLowerCase("it-IT")));
+}
+
+function prioritizeRecent(articles) {
+  const oneHourAgo = Date.now() - 60 * 60 * 1000;
+  const recent = articles.filter(article => {
+    const time = new Date(article.seenAt).getTime();
+    return Number.isFinite(time) && time >= oneHourAgo;
+  });
+
+  return recent.length >= 3 ? recent : articles;
+}
+
+function dedupe(articles) {
+  const seen = new Set();
+  return articles.filter(article => {
+    const key = article.url || article.title;
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function readTag(item, tag) {
@@ -250,8 +248,13 @@ function readSource(item) {
   return decodeXml(match?.[1] || "");
 }
 
+function readMediaUrl(item) {
+  const media = item.match(/<(?:media:content|media:thumbnail|enclosure)[^>]+url=["']([^"']+)["'][^>]*>/i);
+  return decodeXml(media?.[1] || "");
+}
+
 function stripHtml(value) {
-  return decodeXml(value || "").replace(/<[^>]*>/g, " ");
+  return decodeXml(value || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function stripSource(title) {
@@ -264,6 +267,7 @@ function decodeXml(value) {
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .trim();
