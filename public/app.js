@@ -95,7 +95,7 @@ function bindEvents() {
     els.favorites.classList.toggle("is-active", state.favoritesOnly);
     render();
   });
-  els.share.addEventListener("click", shareApp);
+  if (els.share) els.share.addEventListener("click", shareApp);
   els.install.addEventListener("click", async () => {
     if (!state.deferredInstall) return;
     state.deferredInstall.prompt();
@@ -172,7 +172,10 @@ function createArticle(article) {
     img.onerror = null;
     img.src = "/icons/news-placeholder.svg";
   };
-  meta.textContent = [article.domain, article.country, formatDate(article.seenAt)].filter(Boolean).join(" - ");
+  meta.innerHTML = `
+    <span class="time-badge">${formatRelativeDate(article.seenAt)}</span>
+    <span>${escapeHtml(article.domain || "News")}</span>
+  `;
   title.href = article.url;
   title.textContent = article.title;
   summary.textContent = article.summary || "Apri la fonte per leggere il pezzo completo.";
@@ -185,6 +188,8 @@ function createArticle(article) {
 }
 
 function updateWidget(article) {
+  if (!els.widgetTitle || !els.widgetMeta) return;
+
   if (!article) {
     els.widgetTitle.textContent = "Nessuna notizia in evidenza";
     els.widgetMeta.textContent = "Cambia filtro o aggiorna il flusso.";
@@ -230,6 +235,33 @@ function formatDate(value) {
   }).format(date);
 }
 
+function formatRelativeDate(value) {
+  if (!value) return "ora";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "ora";
+
+  const diff = Math.max(0, Date.now() - date.getTime());
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (minutes < 1) return "adesso";
+  if (minutes < 60) return `${minutes} minuti fa`;
+  if (hours < 24) return `${hours} ore fa`;
+  if (days < 7) return `${days} giorni fa`;
+  return formatDate(value);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function setLoading(isLoading) {
   els.refresh.disabled = isLoading;
   if (isLoading) els.status.textContent = "Aggiorno il flusso globale...";
@@ -246,7 +278,7 @@ async function shareApp() {
     await navigator.share(shareData);
   } else {
     await navigator.clipboard.writeText(location.href);
-    els.widgetMeta.textContent = "Link copiato negli appunti.";
+    els.status.textContent = "Link copiato negli appunti.";
   }
 }
 

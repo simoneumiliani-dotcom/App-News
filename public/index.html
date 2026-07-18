@@ -14,20 +14,7 @@
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <a class="brand" href="/" aria-label="World news">
-          <span class="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 48 48" focusable="false">
-              <circle class="brand-globe" cx="24" cy="24" r="16"></circle>
-              <path class="brand-orbit" d="M8 25c8-8 24-8 32 0"></path>
-              <path class="brand-orbit" d="M12 33c6-5 18-5 24 0"></path>
-              <path class="brand-spark" d="M32 10l2.5 5.5L40 18l-5.5 2.5L32 26l-2.5-5.5L24 18l5.5-2.5z"></path>
-            </svg>
-          </span>
-          <span>
-            <strong>World news</strong>
-            <small>News globali</small>
-          </span>
-        </a>
+        <h1 class="app-title">news dal mondo</h1>
         <div class="top-actions">
           <button class="icon-button" id="refreshButton" type="button" title="Aggiorna" aria-label="Aggiorna">&#8635;</button>
           <button class="install-button" id="installButton" type="button" hidden>Installa</button>
@@ -35,28 +22,6 @@
       </header>
 
       <main>
-        <section class="hero">
-          <div class="hero-copy">
-            <h1 class="eyebrow"><strong>Notizie dal mondo</strong></h1>
-            <p class="hero-text">Tutto quello che conta, in un unico flusso globale. Filtra le notizie per paese e categoria, segui i temi principali e resta aggiornato ovunque, anche da mobile.</p>
-            <h2 class="eyebrow hero-english"><strong>World News</strong></h2>
-            <p class="hero-text">Everything that matters, in one global feed. Filter news by country and category, follow the main stories, and stay informed anywhere, even on mobile.</p>
-          </div>
-          <aside class="widget" aria-label="Widget notizie">
-            <div class="widget-header">
-              <span>Widget mobile</span>
-              <button id="shareButton" type="button">Condividi</button>
-            </div>
-            <div class="widget-card">
-              <span class="live-dot"></span>
-              <div>
-                <strong id="widgetTitle">Caricamento notizie...</strong>
-                <p id="widgetMeta">Il riepilogo si aggiorna automaticamente.</p>
-              </div>
-            </div>
-          </aside>
-        </section>
-
         <section class="controls" aria-label="Filtri notizie">
           <label>
             <span>Cerca</span>
