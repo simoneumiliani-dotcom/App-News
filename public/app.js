@@ -1,6 +1,5 @@
 const categories = [
-  ["breaking", "Ultim'ora"],
-  ["all", "Tutte"],
+  ["all", "Ultime news"],
   ["politics", "Politica"],
   ["business", "Economia"],
   ["technology", "Tecnologia"],
