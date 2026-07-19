@@ -57,11 +57,14 @@ select {
 
 .app-title {
   margin: 0;
-  font-size: 1.02rem;
-  line-height: 1.1;
-  font-weight: 800;
-  letter-spacing: 0;
-  text-transform: lowercase;
+  width: min(238px, calc(100vw - 112px));
+  line-height: 0;
+}
+
+.app-title img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .top-actions {

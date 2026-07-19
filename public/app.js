@@ -237,8 +237,8 @@ function setLoading(isLoading) {
 
 async function shareApp() {
   const shareData = {
-    title: "World news",
-    text: "News globali filtrabili, installabili come PWA.",
+    title: "24News",
+    text: "News globali aggiornate, installabili come PWA.",
     url: location.href
   };
 

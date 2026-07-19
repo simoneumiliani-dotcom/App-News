@@ -1,13 +1,14 @@
-const CACHE_NAME = "world-news-v12";
+const CACHE_NAME = "world-news-v13";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/styles.css",
   "/app.js",
   "/manifest.webmanifest",
+  "/brand/24news-title.png",
   "/icons/news-placeholder-globe.png",
-  "/icons/icon-192.svg",
-  "/icons/icon-512.svg"
+  "/icons/icon-192.png",
+  "/icons/icon-512.png"
 ];
 
 self.addEventListener("install", event => {

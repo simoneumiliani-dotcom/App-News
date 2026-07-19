@@ -1,7 +1,7 @@
 {
-  "name": "World news",
-  "short_name": "World news",
-  "description": "News globali filtrabili per paese, categoria e lingua.",
+  "name": "24News",
+  "short_name": "24News",
+  "description": "News globali aggiornate in italiano e inglese.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -10,15 +10,15 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icons/icon-192.svg",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-512.svg",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],
@@ -27,13 +27,13 @@
       "name": "Tecnologia",
       "short_name": "Tech",
       "url": "/?category=technology",
-      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
-      "name": "World news",
-      "short_name": "World",
+      "name": "24News",
+      "short_name": "24News",
       "url": "/",
-      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }
