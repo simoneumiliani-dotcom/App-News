@@ -4,22 +4,14 @@ PWA di news globali in italiano, filtrabile solo per categoria.
 
 ## Funzioni
 
-- Fonti primarie: ANSA RSS e NewsData.io.
+- Fonti primarie: ANSA RSS e Google News RSS.
 - Categoria iniziale: Ultim'ora.
 - Interfaccia semplificata: resta solo il filtro Categoria.
-- Cache lato Vercel di 15 minuti per ridurre chiamate e consumo crediti.
+- Cache lato Vercel di 15 minuti.
 - Preferiti salvati sul dispositivo.
 - Manifest PWA, icone e service worker per installazione su mobile.
 - App non indicizzabile dai motori di ricerca tramite `robots.txt`, meta robots e header `X-Robots-Tag`.
 - Pronta per Vercel con funzione serverless `/api/news`.
-
-## Variabili Ambiente
-
-NewsData.io e opzionale ma consigliato per unire anche notizie internazionali al feed ANSA. Su Vercel aggiungi:
-
-```text
-NEWSDATA_API_KEY=la_tua_chiave_newsdata
-```
 
 ## Anteprima locale
 

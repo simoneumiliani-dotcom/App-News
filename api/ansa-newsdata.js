@@ -12,18 +12,6 @@ const CATEGORY_QUERIES = {
   culture: "cultura libri arte museo patrimonio"
 };
 
-const NEWSDATA_CATEGORIES = {
-  politics: "politics",
-  business: "business",
-  technology: "technology",
-  sports: "sports",
-  health: "health",
-  science: "science",
-  entertainment: "entertainment",
-  climate: "environment",
-  culture: "top"
-};
-
 const ANSA_FEEDS = {
   breaking: "https://www.ansa.it/sito/notizie/topnews/topnews_rss.xml",
   all: "https://www.ansa.it/sito/ansait_rss.xml",
@@ -46,7 +34,7 @@ globalThis.__worldNewsCache = memoryCache;
 export default async function handler(request, response) {
   const { searchParams } = new URL(request.url, "http://localhost");
   const category = cleanCategory(searchParams.get("category") || "breaking");
-  const cacheKey = JSON.stringify({ category, source: "ansa-newsdata-primary-v2" });
+  const cacheKey = JSON.stringify({ category, source: "ansa-google-rss-primary-v1" });
   const cached = memoryCache.get(cacheKey);
 
   if (cached && Date.now() - cached.createdAt < CACHE_TTL) {
@@ -74,42 +62,24 @@ function cleanCategory(value) {
 }
 
 async function fetchNews({ category }) {
-  const hasNewsDataKey = Boolean(getNewsDataKey());
-  const [ansaResult, newsDataResult] = await Promise.allSettled([
+  const [ansaResult, googleResult] = await Promise.allSettled([
     fetchAnsaArticles(category),
-    fetchNewsDataArticles(category)
+    fetchGoogleArticles(category)
   ]);
   const ansaArticles = ansaResult.status === "fulfilled" ? ansaResult.value : [];
-  const newsDataArticles = newsDataResult.status === "fulfilled" ? newsDataResult.value : [];
-  const newsDataError = newsDataResult.status === "rejected"
-    ? newsDataResult.reason?.message || "NewsData.io non disponibile"
-    : "";
+  const googleArticles = googleResult.status === "fulfilled" ? googleResult.value : [];
   const articles = await enrichMissingImages(
-    sortByDate(dedupe([...ansaArticles, ...newsDataArticles])).slice(0, MAX_ARTICLES)
+    sortByDate(dedupe([...ansaArticles, ...googleArticles])).slice(0, MAX_ARTICLES)
   );
 
   if (articles.length === 0) {
-    throw new Error("ANSA RSS and NewsData.io returned no articles");
+    throw new Error("ANSA RSS and Google News RSS returned no articles");
   }
 
   return {
     articles,
-    sourceNote: buildSourceNote({ hasNewsDataKey, newsDataArticles, newsDataError })
+    sourceNote: "Fonti primarie: ANSA RSS e Google News RSS, ordinate cronologicamente."
   };
-}
-
-function buildSourceNote({ hasNewsDataKey, newsDataArticles, newsDataError }) {
-  if (newsDataArticles.length > 0) {
-    return "Fonti primarie: ANSA RSS e NewsData.io, ordinate cronologicamente.";
-  }
-
-  if (!hasNewsDataKey) {
-    return "Fonte primaria: ANSA RSS. NewsData.io non e attiva perche NEWSDATA_API_KEY non e disponibile nel deployment.";
-  }
-
-  return newsDataError
-    ? `Fonte primaria: ANSA RSS. NewsData.io e configurata, ma ora non risponde: ${newsDataError}.`
-    : "Fonte primaria: ANSA RSS. NewsData.io e configurata, ma non ha restituito risultati per questa categoria.";
 }
 
 async function fetchAnsaArticles(category) {
@@ -138,66 +108,35 @@ async function fetchAnsaArticles(category) {
   return articles;
 }
 
-function getNewsDataKey() {
-  return globalThis.process?.env?.NEWSDATA_API_KEY
-    || globalThis.process?.env?.NEWSDATA_KEY
-    || "";
-}
+async function fetchGoogleArticles(category) {
+  const rssUrl = new URL("https://news.google.com/rss/search");
+  rssUrl.searchParams.set("q", CATEGORY_QUERIES[category] || CATEGORY_QUERIES.breaking);
+  rssUrl.searchParams.set("hl", "it-IT");
+  rssUrl.searchParams.set("gl", "IT");
+  rssUrl.searchParams.set("ceid", "IT:it");
 
-async function fetchNewsDataArticles(category) {
-  const apiKey = getNewsDataKey();
-
-  if (!apiKey) {
-    return [];
-  }
-
-  const url = new URL("https://newsdata.io/api/1/latest");
-  url.searchParams.set("apikey", apiKey);
-  url.searchParams.set("language", "it,en");
-  url.searchParams.set("removeduplicate", "1");
-  url.searchParams.set("image", "1");
-  url.searchParams.set("size", "10");
-
-  if (category === "breaking") {
-    url.searchParams.set("q", CATEGORY_QUERIES.breaking);
-    url.searchParams.set("timeframe", "12");
-  } else if (category !== "all") {
-    url.searchParams.set("category", NEWSDATA_CATEGORIES[category] || "top");
-    url.searchParams.set("q", CATEGORY_QUERIES[category]);
-  }
-
-  const apiResponse = await fetch(url, {
+  const rssResponse = await fetch(rssUrl, {
     headers: {
       "User-Agent": "WorldNewsPWA/1.0"
     }
   });
 
-  if (!apiResponse.ok) {
-    throw new Error(`NewsData.io ${apiResponse.status}`);
+  if (!rssResponse.ok) {
+    throw new Error(`Google News RSS ${rssResponse.status}`);
   }
 
-  const data = await apiResponse.json();
+  const xml = await rssResponse.text();
+  const articles = parseRss(xml, {
+    country: "IT",
+    fallbackDomain: "Google News",
+    language: "it"
+  });
 
-  if (data.status && data.status !== "success") {
-    throw new Error(data.results?.message || data.message || "NewsData.io error");
+  if (articles.length === 0) {
+    throw new Error("Google News RSS returned no articles");
   }
 
-  return (data.results || [])
-    .map(normalizeNewsDataArticle)
-    .filter(article => article.title && article.url);
-}
-
-function normalizeNewsDataArticle(article) {
-  return {
-    title: article.title || "Notizia senza titolo",
-    url: article.link || "",
-    image: normalizeImageUrl(article.image_url || ""),
-    domain: article.source_name || article.source_id || "NewsData.io",
-    country: Array.isArray(article.country) ? article.country.join(", ").toUpperCase() : "",
-    language: article.language || "",
-    seenAt: parseDate(article.pubDate),
-    summary: article.description || article.content || `Copertura segnalata da ${article.source_name || "NewsData.io"}.`
-  };
+  return articles;
 }
 
 function parseRss(xml, options) {
