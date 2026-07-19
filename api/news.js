@@ -1,3 +1,7 @@
+import ansaNewsDataHandler from "./ansa-newsdata.js";
+
+export default ansaNewsDataHandler;
+
 const CATEGORY_QUERIES = {
   it: {
     breaking: "ultim'ora notizie importanti when:1h",
@@ -44,7 +48,7 @@ const ANSA_FEEDS = {
 const memoryCache = globalThis.__worldNewsCache || new Map();
 globalThis.__worldNewsCache = memoryCache;
 
-export default async function handler(request, response) {
+async function legacyHandler(request, response) {
   const { searchParams } = new URL(request.url, "http://localhost");
   const category = cleanCategory(searchParams.get("category") || "breaking");
   const country = cleanToken(searchParams.get("country") || "");

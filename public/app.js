@@ -12,24 +12,6 @@ const categories = [
   ["culture", "Cultura"]
 ];
 
-const countries = [
-  ["", "Tutto il mondo"],
-  ["IT", "Italia"],
-  ["EG", "Egitto"],
-  ["AE", "Abu Dhabi"],
-  ["US", "Stati Uniti"],
-  ["GB", "Regno Unito"],
-  ["FR", "Francia"],
-  ["DE", "Germania"],
-  ["ES", "Spagna"],
-  ["CN", "Cina"],
-  ["JP", "Giappone"],
-  ["IN", "India"],
-  ["BR", "Brasile"],
-  ["ZA", "Sudafrica"],
-  ["AU", "Australia"]
-];
-
 const state = {
   articles: [],
   saved: readSaved(),
@@ -39,9 +21,6 @@ const state = {
 
 const els = {
   category: document.querySelector("#categorySelect"),
-  country: document.querySelector("#countrySelect"),
-  language: document.querySelector("#languageSelect"),
-  search: document.querySelector("#searchInput"),
   grid: document.querySelector("#newsGrid"),
   count: document.querySelector("#resultCount"),
   status: document.querySelector("#statusText"),
@@ -58,7 +37,6 @@ init();
 
 function init() {
   fillSelect(els.category, categories);
-  fillSelect(els.country, countries);
   applyInitialFilters();
   bindEvents();
   registerServiceWorker();
@@ -72,9 +50,6 @@ function fillSelect(select, items) {
 function applyInitialFilters() {
   const params = new URLSearchParams(location.search);
   setSelectValue(els.category, params.get("category"));
-  setSelectValue(els.country, params.get("country"));
-  setSelectValue(els.language, params.get("lang"));
-  els.search.value = params.get("q") || "";
 }
 
 function setSelectValue(select, value) {
@@ -84,11 +59,7 @@ function setSelectValue(select, value) {
 }
 
 function bindEvents() {
-  const reload = debounce(loadNews, 350);
   els.category.addEventListener("change", loadNews);
-  els.country.addEventListener("change", loadNews);
-  els.language.addEventListener("change", loadNews);
-  els.search.addEventListener("input", reload);
   els.refresh.addEventListener("click", loadNews);
   els.favorites.addEventListener("click", () => {
     state.favoritesOnly = !state.favoritesOnly;
@@ -113,10 +84,7 @@ function bindEvents() {
 
 async function loadNews() {
   const params = new URLSearchParams({
-    category: els.category.value,
-    country: els.country.value,
-    lang: els.language.value,
-    q: els.search.value.trim()
+    category: els.category.value
   });
 
   setLoading(true);

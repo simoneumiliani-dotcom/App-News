@@ -98,7 +98,7 @@ select {
 
 .controls {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 8px;
   padding: 10px;
   border: 1px solid var(--line);
@@ -288,10 +288,6 @@ a:focus-visible {
 }
 
 @media (max-width: 380px) {
-  .controls {
-    grid-template-columns: 1fr;
-  }
-
   .article-card {
     grid-template-columns: minmax(0, 1fr) 82px;
   }
