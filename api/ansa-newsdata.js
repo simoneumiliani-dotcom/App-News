@@ -1,16 +1,36 @@
 const CATEGORY_QUERIES = {
-  breaking: "ultim'ora mondo internazionale",
-  all: "mondo internazionale attualita",
-  politics: "politica governo elezioni parlamento diplomazia",
-  business: "economia mercati finanza imprese",
-  technology: "tecnologia intelligenza artificiale startup cybersecurity",
-  sports: "sport calcio tennis basket olimpiadi",
-  health: "salute medicina ospedale vaccini",
-  science: "scienza ricerca spazio scoperta",
-  entertainment: "cinema musica spettacolo streaming",
-  climate: "clima ambiente energia meteo emissioni",
-  culture: "cultura libri arte museo patrimonio"
+  it: {
+    breaking: "ultim'ora mondo internazionale",
+    all: "mondo internazionale attualita",
+    politics: "politica governo elezioni parlamento diplomazia",
+    business: "economia mercati finanza imprese",
+    technology: "tecnologia intelligenza artificiale startup cybersecurity",
+    sports: "sport calcio tennis basket olimpiadi",
+    health: "salute medicina ospedale vaccini",
+    science: "scienza ricerca spazio scoperta",
+    entertainment: "cinema musica spettacolo streaming",
+    climate: "clima ambiente energia meteo emissioni",
+    culture: "cultura libri arte museo patrimonio"
+  },
+  en: {
+    breaking: "breaking news world international",
+    all: "world international latest news",
+    politics: "politics government elections parliament diplomacy",
+    business: "economy markets finance business companies",
+    technology: "technology artificial intelligence startups cybersecurity",
+    sports: "sports football tennis basketball olympics",
+    health: "health medicine hospitals vaccines",
+    science: "science research space discovery",
+    entertainment: "movies music entertainment streaming",
+    climate: "climate environment energy weather emissions",
+    culture: "culture books art museum heritage"
+  }
 };
+
+const GOOGLE_LOCALES = [
+  { country: "IT", fallbackDomain: "Google News IT", hl: "it-IT", gl: "IT", ceid: "IT:it", language: "it" },
+  { country: "US", fallbackDomain: "Google News EN", hl: "en-US", gl: "US", ceid: "US:en", language: "en" }
+];
 
 const ANSA_FEEDS = {
   breaking: "https://www.ansa.it/sito/notizie/topnews/topnews_rss.xml",
@@ -26,29 +46,18 @@ const ANSA_FEEDS = {
   culture: "https://www.ansa.it/sito/notizie/cultura/cultura_rss.xml"
 };
 
-const CACHE_TTL = 15 * 60 * 1000;
 const MAX_ARTICLES = 40;
-const memoryCache = globalThis.__worldNewsCache || new Map();
-globalThis.__worldNewsCache = memoryCache;
 
 export default async function handler(request, response) {
   const { searchParams } = new URL(request.url, "http://localhost");
   const category = cleanCategory(searchParams.get("category") || "breaking");
-  const cacheKey = JSON.stringify({ category, source: "ansa-google-rss-primary-v1" });
-  const cached = memoryCache.get(cacheKey);
-
-  if (cached && Date.now() - cached.createdAt < CACHE_TTL) {
-    response.setHeader("Cache-Control", "s-maxage=900, stale-while-revalidate=1800");
-    response.status(200).json(cached.payload);
-    return;
-  }
 
   try {
     const payload = await fetchNews({ category });
-    memoryCache.set(cacheKey, { createdAt: Date.now(), payload });
-    response.setHeader("Cache-Control", "s-maxage=900, stale-while-revalidate=1800");
+    response.setHeader("Cache-Control", "no-store, max-age=0");
     response.status(200).json(payload);
   } catch (error) {
+    response.setHeader("Cache-Control", "no-store, max-age=0");
     response.status(502).json({
       articles: [],
       error: "NEWS_SOURCE_UNAVAILABLE",
@@ -58,7 +67,7 @@ export default async function handler(request, response) {
 }
 
 function cleanCategory(value) {
-  return Object.prototype.hasOwnProperty.call(CATEGORY_QUERIES, value) ? value : "breaking";
+  return Object.prototype.hasOwnProperty.call(CATEGORY_QUERIES.it, value) ? value : "breaking";
 }
 
 async function fetchNews({ category }) {
@@ -78,7 +87,7 @@ async function fetchNews({ category }) {
 
   return {
     articles,
-    sourceNote: "Fonti primarie: ANSA RSS e Google News RSS, ordinate cronologicamente."
+    sourceNote: "Fonti primarie: ANSA RSS e Google News RSS in italiano e inglese, ordinate dal piu recente."
   };
 }
 
@@ -109,11 +118,24 @@ async function fetchAnsaArticles(category) {
 }
 
 async function fetchGoogleArticles(category) {
+  const results = await Promise.allSettled(
+    GOOGLE_LOCALES.map(locale => fetchGoogleLocaleArticles(category, locale))
+  );
+  const articles = results.flatMap(result => result.status === "fulfilled" ? result.value : []);
+
+  if (articles.length === 0) {
+    throw new Error("Google News RSS returned no articles");
+  }
+
+  return articles;
+}
+
+async function fetchGoogleLocaleArticles(category, locale) {
   const rssUrl = new URL("https://news.google.com/rss/search");
-  rssUrl.searchParams.set("q", CATEGORY_QUERIES[category] || CATEGORY_QUERIES.breaking);
-  rssUrl.searchParams.set("hl", "it-IT");
-  rssUrl.searchParams.set("gl", "IT");
-  rssUrl.searchParams.set("ceid", "IT:it");
+  rssUrl.searchParams.set("q", CATEGORY_QUERIES[locale.language][category] || CATEGORY_QUERIES[locale.language].breaking);
+  rssUrl.searchParams.set("hl", locale.hl);
+  rssUrl.searchParams.set("gl", locale.gl);
+  rssUrl.searchParams.set("ceid", locale.ceid);
 
   const rssResponse = await fetch(rssUrl, {
     headers: {
@@ -122,21 +144,11 @@ async function fetchGoogleArticles(category) {
   });
 
   if (!rssResponse.ok) {
-    throw new Error(`Google News RSS ${rssResponse.status}`);
+    throw new Error(`Google News RSS ${locale.language} ${rssResponse.status}`);
   }
 
   const xml = await rssResponse.text();
-  const articles = parseRss(xml, {
-    country: "IT",
-    fallbackDomain: "Google News",
-    language: "it"
-  });
-
-  if (articles.length === 0) {
-    throw new Error("Google News RSS returned no articles");
-  }
-
-  return articles;
+  return parseRss(xml, locale);
 }
 
 function parseRss(xml, options) {
