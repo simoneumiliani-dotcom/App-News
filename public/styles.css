@@ -202,7 +202,7 @@ a:focus-visible {
   align-items: center;
   gap: 6px;
   color: var(--muted);
-  font-size: 0.69rem;
+  font-size: 0.72rem;
   font-weight: 750;
   line-height: 1.2;
   text-transform: none;
@@ -226,8 +226,8 @@ a:focus-visible {
 
 .article-card h2 {
   margin: 0;
-  font-size: 0.86rem;
-  line-height: 1.24;
+  font-size: 0.94rem;
+  line-height: 1.28;
   letter-spacing: 0;
   font-weight: 750;
 }
@@ -241,8 +241,8 @@ a:focus-visible {
   margin: 1px 0 0;
   overflow: hidden;
   color: var(--muted);
-  font-size: 0.72rem;
-  line-height: 1.35;
+  font-size: 0.78rem;
+  line-height: 1.4;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -260,7 +260,7 @@ a:focus-visible {
   border: 0;
   background: transparent;
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
 }
 
 .save-button.is-saved {

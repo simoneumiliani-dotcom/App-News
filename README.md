@@ -4,8 +4,7 @@ PWA di news globali in italiano, filtrabile solo per categoria.
 
 ## Funzioni
 
-- Fonte primaria: ANSA RSS.
-- Fonte secondaria: NewsData.io, usata quando ANSA restituisce pochi risultati.
+- Fonti primarie: ANSA RSS e NewsData.io.
 - Categoria iniziale: Ultim'ora.
 - Interfaccia semplificata: resta solo il filtro Categoria.
 - Cache lato Vercel di 15 minuti per ridurre chiamate e consumo crediti.
@@ -16,7 +15,7 @@ PWA di news globali in italiano, filtrabile solo per categoria.
 
 ## Variabili Ambiente
 
-NewsData.io e opzionale ma consigliato come fonte secondaria. Su Vercel aggiungi:
+NewsData.io e opzionale ma consigliato per unire anche notizie internazionali al feed ANSA. Su Vercel aggiungi:
 
 ```text
 NEWSDATA_API_KEY=la_tua_chiave_newsdata

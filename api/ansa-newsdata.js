@@ -39,13 +39,14 @@ const ANSA_FEEDS = {
 };
 
 const CACHE_TTL = 15 * 60 * 1000;
+const MAX_ARTICLES = 40;
 const memoryCache = globalThis.__worldNewsCache || new Map();
 globalThis.__worldNewsCache = memoryCache;
 
 export default async function handler(request, response) {
   const { searchParams } = new URL(request.url, "http://localhost");
   const category = cleanCategory(searchParams.get("category") || "breaking");
-  const cacheKey = JSON.stringify({ category, source: "ansa-primary-newsdata-secondary-v1" });
+  const cacheKey = JSON.stringify({ category, source: "ansa-newsdata-primary-v1" });
   const cached = memoryCache.get(cacheKey);
 
   if (cached && Date.now() - cached.createdAt < CACHE_TTL) {
@@ -73,14 +74,15 @@ function cleanCategory(value) {
 }
 
 async function fetchNews({ category }) {
-  const ansaArticles = await fetchAnsaArticles(category).catch(() => []);
-  let newsDataArticles = [];
-
-  if (ansaArticles.length < 10) {
-    newsDataArticles = await fetchNewsDataArticles(category).catch(() => []);
-  }
-
-  const articles = sortByDate(dedupe([...ansaArticles, ...newsDataArticles])).slice(0, 40);
+  const [ansaResult, newsDataResult] = await Promise.allSettled([
+    fetchAnsaArticles(category),
+    fetchNewsDataArticles(category)
+  ]);
+  const ansaArticles = ansaResult.status === "fulfilled" ? ansaResult.value : [];
+  const newsDataArticles = newsDataResult.status === "fulfilled" ? newsDataResult.value : [];
+  const articles = await enrichMissingImages(
+    sortByDate(dedupe([...ansaArticles, ...newsDataArticles])).slice(0, MAX_ARTICLES)
+  );
 
   if (articles.length === 0) {
     throw new Error("ANSA RSS and NewsData.io returned no articles");
@@ -89,8 +91,8 @@ async function fetchNews({ category }) {
   return {
     articles,
     sourceNote: newsDataArticles.length > 0
-      ? "Fonte primaria: ANSA RSS. NewsData.io integra le notizie quando ANSA restituisce pochi risultati."
-      : "Fonte primaria: ANSA RSS."
+      ? "Fonti primarie: ANSA RSS e NewsData.io, ordinate cronologicamente."
+      : "Fonte primaria: ANSA RSS. Aggiungi NEWSDATA_API_KEY per unire anche NewsData.io."
   };
 }
 
@@ -216,6 +218,45 @@ function sortByDate(articles) {
   });
 }
 
+async function enrichMissingImages(articles) {
+  return Promise.all(articles.map(async article => {
+    if (article.image) return article;
+
+    const image = await fetchPageImage(article.url);
+    return image ? { ...article, image } : article;
+  }));
+}
+
+async function fetchPageImage(url) {
+  if (!url || !/^https?:\/\//i.test(url)) return "";
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1400);
+
+  try {
+    const response = await fetch(url, {
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "WorldNewsPWA/1.0",
+        "Accept": "text/html,application/xhtml+xml"
+      }
+    });
+
+    if (!response.ok) return "";
+
+    const html = await response.text();
+    return normalizeImageUrl(
+      readMetaImage(html) || readImageFromHtml(html),
+      response.url || url
+    );
+  } catch {
+    return "";
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function dedupe(articles) {
   const seen = new Set();
   return articles.filter(article => {
@@ -241,16 +282,29 @@ function readMediaUrl(item) {
   return normalizeImageUrl(decodeXml(media?.[1] || ""));
 }
 
+function readMetaImage(html) {
+  return readMetaContent(html, "property", "og:image")
+    || readMetaContent(html, "property", "og:image:url")
+    || readMetaContent(html, "name", "twitter:image")
+    || readMetaContent(html, "name", "twitter:image:src");
+}
+
+function readMetaContent(html, attribute, value) {
+  const pattern = new RegExp(`<meta[^>]+${attribute}=["']${escapeRegExp(value)}["'][^>]+content=["']([^"']+)["'][^>]*>`, "i");
+  const reversePattern = new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+${attribute}=["']${escapeRegExp(value)}["'][^>]*>`, "i");
+  return decodeXml(html.match(pattern)?.[1] || html.match(reversePattern)?.[1] || "");
+}
+
 function readImageFromHtml(html) {
   const image = html.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i);
   return normalizeImageUrl(decodeXml(image?.[1] || ""));
 }
 
-function normalizeImageUrl(value) {
+function normalizeImageUrl(value, baseUrl = "") {
   if (!value || value.startsWith("data:")) return "";
 
   try {
-    return new URL(value).toString();
+    return new URL(value, baseUrl || undefined).toString();
   } catch {
     return "";
   }
@@ -281,4 +335,8 @@ function decodeXml(value) {
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .trim();
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

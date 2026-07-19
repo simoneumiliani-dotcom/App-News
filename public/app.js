@@ -134,11 +134,11 @@ function createArticle(article) {
   const saved = Boolean(state.saved[article.url]);
 
   imageLink.href = article.url;
-  img.src = article.image || "/icons/news-placeholder.svg";
+  img.src = article.image || "/icons/news-placeholder-globe.png";
   img.alt = article.title;
   img.onerror = () => {
     img.onerror = null;
-    img.src = "/icons/news-placeholder.svg";
+    img.src = "/icons/news-placeholder-globe.png";
   };
   meta.innerHTML = `
     <span class="time-badge">${formatRelativeDate(article.seenAt)}</span>

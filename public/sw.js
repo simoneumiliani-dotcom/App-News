@@ -1,11 +1,11 @@
-const CACHE_NAME = "world-news-v8";
+const CACHE_NAME = "world-news-v10";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/styles.css",
   "/app.js",
   "/manifest.webmanifest",
-  "/icons/news-placeholder.svg",
+  "/icons/news-placeholder-globe.png",
   "/icons/icon-192.svg",
   "/icons/icon-512.svg"
 ];
