@@ -46,7 +46,7 @@ globalThis.__worldNewsCache = memoryCache;
 export default async function handler(request, response) {
   const { searchParams } = new URL(request.url, "http://localhost");
   const category = cleanCategory(searchParams.get("category") || "breaking");
-  const cacheKey = JSON.stringify({ category, source: "ansa-newsdata-primary-v1" });
+  const cacheKey = JSON.stringify({ category, source: "ansa-newsdata-primary-v2" });
   const cached = memoryCache.get(cacheKey);
 
   if (cached && Date.now() - cached.createdAt < CACHE_TTL) {
@@ -74,12 +74,16 @@ function cleanCategory(value) {
 }
 
 async function fetchNews({ category }) {
+  const hasNewsDataKey = Boolean(getNewsDataKey());
   const [ansaResult, newsDataResult] = await Promise.allSettled([
     fetchAnsaArticles(category),
     fetchNewsDataArticles(category)
   ]);
   const ansaArticles = ansaResult.status === "fulfilled" ? ansaResult.value : [];
   const newsDataArticles = newsDataResult.status === "fulfilled" ? newsDataResult.value : [];
+  const newsDataError = newsDataResult.status === "rejected"
+    ? newsDataResult.reason?.message || "NewsData.io non disponibile"
+    : "";
   const articles = await enrichMissingImages(
     sortByDate(dedupe([...ansaArticles, ...newsDataArticles])).slice(0, MAX_ARTICLES)
   );
@@ -90,10 +94,22 @@ async function fetchNews({ category }) {
 
   return {
     articles,
-    sourceNote: newsDataArticles.length > 0
-      ? "Fonti primarie: ANSA RSS e NewsData.io, ordinate cronologicamente."
-      : "Fonte primaria: ANSA RSS. Aggiungi NEWSDATA_API_KEY per unire anche NewsData.io."
+    sourceNote: buildSourceNote({ hasNewsDataKey, newsDataArticles, newsDataError })
   };
+}
+
+function buildSourceNote({ hasNewsDataKey, newsDataArticles, newsDataError }) {
+  if (newsDataArticles.length > 0) {
+    return "Fonti primarie: ANSA RSS e NewsData.io, ordinate cronologicamente.";
+  }
+
+  if (!hasNewsDataKey) {
+    return "Fonte primaria: ANSA RSS. NewsData.io non e attiva perche NEWSDATA_API_KEY non e disponibile nel deployment.";
+  }
+
+  return newsDataError
+    ? `Fonte primaria: ANSA RSS. NewsData.io e configurata, ma ora non risponde: ${newsDataError}.`
+    : "Fonte primaria: ANSA RSS. NewsData.io e configurata, ma non ha restituito risultati per questa categoria.";
 }
 
 async function fetchAnsaArticles(category) {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "world-news-v10";
+const CACHE_NAME = "world-news-v11";
 const APP_SHELL = [
   "/",
   "/index.html",
